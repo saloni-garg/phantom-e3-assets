@@ -26,9 +26,17 @@ run_stage() {
   return $rc
 }
 
-for s in stage_setup.sh stage_probe.sh stage_data.sh stage_train.sh stage_posthoc.sh; do
-  run_stage "$s" || status "PIPELINE_CONTINUE_AFTER_FAILURE $s"
-done
+if [ -f "$RES/RUN_POSTHOC_ONLY" ]; then
+  # Path 1 transition: a restarted pod with this marker runs only the
+  # posthoc stage (the training checkpoints are already on disk), then
+  # joins the command loop so later stages (Option B) can be triggered.
+  status "BOOT_POSTHOC_ONLY"
+  run_stage stage_posthoc.sh || status "PIPELINE_CONTINUE_AFTER_FAILURE stage_posthoc.sh"
+else
+  for s in stage_setup.sh stage_probe.sh stage_data.sh stage_train.sh stage_posthoc.sh; do
+    run_stage "$s" || status "PIPELINE_CONTINUE_AFTER_FAILURE $s"
+  done
+fi
 status "PIPELINE_DONE"
 touch "$RES/DONE"
 
