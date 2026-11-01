@@ -1,1 +1,1 @@
-stage_data.sh:data7
+stage_setup.sh:setup10
