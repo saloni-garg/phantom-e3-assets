@@ -35,6 +35,8 @@ fi
 /workspace/venv-e3/bin/pip install -q "torch==2.13.0" "torchvision==0.28.0" "torchaudio==2.11.0" "vllm==0.29.0" || exit 1
 /workspace/venv-e3/bin/pip install -q ninja || exit 1
 /workspace/venv-e3/bin/ninja --version || exit 1
+/workspace/venv-e3/bin/pip uninstall -y flashinfer flashinfer-python > /dev/null 2>&1 || true
+/workspace/venv-e3/bin/python -c "import importlib.util; print('flashinfer present:', importlib.util.find_spec('flashinfer') is not None)"
 /workspace/venv-e3/bin/pip install -q --no-deps "TransferQueue>=0.1.11" || exit 1
 /workspace/venv-e3/bin/python -c "import transfer_queue, zmq, msgspec, torch, vllm; print('stack ok', torch.__version__, vllm.__version__, torch.cuda.is_available())" || exit 1
 nvidia-smi | head -12
