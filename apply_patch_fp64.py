@@ -1,9 +1,11 @@
 """Apply the float64 group-statistics patch to a stock verl core_algos.py.
 
-This is the E3 patched arm: identical code to stock except that GRPO group
-mean/std are computed in float64 in both the scalar and vectorized
-estimators. Every replacement is exact and asserted; the script fails
-loudly if the stock source does not match.
+The E3 patched arm: identical code to stock except that GRPO group
+mean/std are computed in float64 in both the scalar and vectorized GRPO
+estimators. Replacements are scoped to each function's own source span
+(other estimators in the file, e.g. GPG, contain near-identical blocks
+and must NOT be touched). Fails loudly if an anchor is not found exactly
+once inside its span.
 
 Usage: apply_patch_fp64.py <path-to-core_algos.py>
 """
@@ -30,11 +32,23 @@ VEC_NEW = """        scores = token_level_rewards.sum(dim=-1)
             scalars = (scores64 - mean_g[g]).float()"""
 
 
+def span(src, defn):
+    start = src.index(defn)
+    nxt = src.find("@register_adv_est", start)
+    return start, (nxt if nxt != -1 else len(src))
+
+
+def patch_span(src, defn, old, new):
+    s, e = span(src, defn)
+    body = src[s:e]
+    assert body.count(old) == 1, f"{defn}: anchor found {body.count(old)} times in span"
+    return src[:s] + body.replace(old, new) + src[e:]
+
+
 def main(path):
     src = open(path).read()
-    assert src.count(SCALAR_OLD) == 1, f"scalar anchor found {src.count(SCALAR_OLD)} times"
-    assert src.count(VEC_OLD) == 1, f"vectorized anchor found {src.count(VEC_OLD)} times"
-    src = src.replace(SCALAR_OLD, SCALAR_NEW).replace(VEC_OLD, VEC_NEW)
+    src = patch_span(src, "def compute_grpo_outcome_advantage(", SCALAR_OLD, SCALAR_NEW)
+    src = patch_span(src, "def compute_grpo_vectorized_outcome_advantage(", VEC_OLD, VEC_NEW)
     open(path, "w").write(src)
     print("patched:", path)
 
