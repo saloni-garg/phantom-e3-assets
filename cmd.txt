@@ -1,1 +1,1 @@
-idle:0
+stage_setup.sh:fix1
