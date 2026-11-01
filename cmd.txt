@@ -1,1 +1,1 @@
-stage_data.sh:data6
+stage_train.sh:train1
