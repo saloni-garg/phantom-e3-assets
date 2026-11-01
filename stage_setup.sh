@@ -16,11 +16,15 @@ for f in apply_patch_fp64.py probe_estimator.py instrument_patch.py reward_fn.py
   curl -sL "$RAW/$f" -o "/workspace/work/$f"
 done
 
+git checkout -- verl/trainer/ppo/core_algos.py verl/utils/groupwise.py
 cp verl/trainer/ppo/core_algos.py /workspace/work/core_algos_stock.py
-python3 /workspace/work/apply_patch_fp64.py verl/trainer/ppo/core_algos.py || exit 1
+cp verl/utils/groupwise.py /workspace/work/groupwise_stock.py
+python3 /workspace/work/apply_patch_fp64.py verl/trainer/ppo/core_algos.py verl/utils/groupwise.py || exit 1
 python3 /workspace/work/instrument_patch.py verl/trainer/ppo/core_algos.py || exit 1
 cp verl/trainer/ppo/core_algos.py /workspace/work/core_algos_fp64.py
+cp verl/utils/groupwise.py /workspace/work/groupwise_fp64.py
 cp /workspace/work/core_algos_stock.py verl/trainer/ppo/core_algos.py
+cp /workspace/work/groupwise_stock.py verl/utils/groupwise.py
 python3 /workspace/work/instrument_patch.py verl/trainer/ppo/core_algos.py || exit 1
 cp verl/trainer/ppo/core_algos.py /workspace/work/core_algos_stock.py
 
