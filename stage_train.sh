@@ -7,8 +7,8 @@ mkdir -p /workspace/results/advlogs
 
 train_arm() {
   local ARM="$1" SEED="$2"
-  if [ "$ARM" = "stock" ]; then cp /workspace/work/core_algos_stock.py verl/trainer/ppo/core_algos.py;
-  else cp /workspace/work/core_algos_fp64.py verl/trainer/ppo/core_algos.py; fi
+  if [ "$ARM" = "stock" ]; then cp /workspace/work/core_algos_stock.py verl/trainer/ppo/core_algos.py; cp /workspace/work/groupwise_stock.py verl/utils/groupwise.py;
+  else cp /workspace/work/core_algos_fp64.py verl/trainer/ppo/core_algos.py; cp /workspace/work/groupwise_fp64.py verl/utils/groupwise.py; fi
   export E3_ADV_LOG="/workspace/results/advlogs/${ARM}-s${SEED}.csv"
   rm -f "$E3_ADV_LOG"
   echo "call,fn,groups,uniform_groups,sum_abs_adv_uniform,sum_abs_adv_total" > "$E3_ADV_LOG"
