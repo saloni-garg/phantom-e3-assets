@@ -1,1 +1,1 @@
-stage_train.sh:train10
+stage_mark.sh:mark1
