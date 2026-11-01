@@ -1,1 +1,1 @@
-stage_train.sh:train2
+stage_setup.sh:setup5
