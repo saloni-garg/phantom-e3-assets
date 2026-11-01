@@ -24,12 +24,15 @@ WRAPPER = '''
 import os as _e3_os
 import itertools as _e3_it
 _e3_counter = _e3_it.count()
+try:
+    with open("/workspace/results/advlogs/adv_heartbeat.log", "a") as _f:
+        _f.write("imported core_algos pid=%d env_log=%s\n" % (_e3_os.getpid(), _e3_os.environ.get("E3_ADV_LOG")))
+except Exception:
+    pass
 
 
 def _e3_log(fn_name, token_level_rewards, index, advantages):
-    path = _e3_os.environ.get("E3_ADV_LOG")
-    if not path:
-        return
+    path = _e3_os.environ.get("E3_ADV_LOG") or "/workspace/results/advlogs/adv_fallback.csv"
     try:
         scores = token_level_rewards.sum(dim=-1)
         adv_rows = advantages.abs().sum(dim=-1)
