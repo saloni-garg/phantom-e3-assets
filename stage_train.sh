@@ -27,6 +27,7 @@ train_arm() {
     custom_reward_function.path=/workspace/work/reward_fn.py \
     custom_reward_function.name=compute_score \
     actor_rollout_ref.model.path=Qwen/Qwen2.5-0.5B-Instruct \
+    actor_rollout_ref.model.attn_implementation=sdpa \
     actor_rollout_ref.actor.optim.lr=1e-6 \
     actor_rollout_ref.actor.ppo_mini_batch_size=64 \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=16 \
