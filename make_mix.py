@@ -22,62 +22,67 @@ DATA = "/workspace/data"
 os.makedirs(DATA, exist_ok=True)
 MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 
-subprocess.run(
-    ["/workspace/venv-e3/bin/python", "examples/data_preprocess/gsm8k.py",
-     "--local_save_dir", DATA],
-    cwd="/workspace/work/verl-e3", check=True,
-)
+def main():
+    subprocess.run(
+        ["/workspace/venv-e3/bin/python", "examples/data_preprocess/gsm8k.py",
+         "--local_save_dir", DATA],
+        cwd="/workspace/work/verl-e3", check=True,
+    )
 
-import pandas as pd  # noqa: E402
+    import pandas as pd  # noqa: E402
 
-train = pd.read_parquet(f"{DATA}/train.parquet")
-test = pd.read_parquet(f"{DATA}/test.parquet")
-heldout = test.sample(n=500, random_state=2027)
-heldout.to_parquet(f"{DATA}/heldout.parquet", index=False)
+    train = pd.read_parquet(f"{DATA}/train.parquet")
+    test = pd.read_parquet(f"{DATA}/test.parquet")
+    heldout = test.sample(n=500, random_state=2027)
+    heldout.to_parquet(f"{DATA}/heldout.parquet", index=False)
 
-from transformers import AutoTokenizer  # noqa: E402
-from vllm import LLM, SamplingParams  # noqa: E402
+    from transformers import AutoTokenizer  # noqa: E402
+    from vllm import LLM, SamplingParams  # noqa: E402
 
-tok = AutoTokenizer.from_pretrained(MODEL)
-prompts = []
-for msgs in train["prompt"]:
-    prompts.append(tok.apply_chat_template(list(msgs), tokenize=False, add_generation_prompt=True))
-gts = [r["reward_model"]["ground_truth"] for r in train.to_dict("records")]
+    tok = AutoTokenizer.from_pretrained(MODEL)
+    prompts = []
+    for msgs in train["prompt"]:
+        prompts.append(tok.apply_chat_template(list(msgs), tokenize=False, add_generation_prompt=True))
+    gts = [r["reward_model"]["ground_truth"] for r in train.to_dict("records")]
 
-llm = LLM(model=MODEL, gpu_memory_utilization=0.85, max_model_len=1024, seed=2027)
-sp = SamplingParams(n=8, temperature=1.0, top_p=1.0, max_tokens=512)
-outs = llm.generate(prompts, sp)
+    llm = LLM(model=MODEL, gpu_memory_utilization=0.85, max_model_len=1024, seed=2027)
+    sp = SamplingParams(n=8, temperature=1.0, top_p=1.0, max_tokens=512)
+    outs = llm.generate(prompts, sp)
 
-rates = []
-for out, gt in zip(outs, gts):
-    hits = sum(1 for o in out.outputs if compute_score("openai/gsm8k", o.text, gt) >= 1.0)
-    rates.append(hits / 8.0)
-train["pass_rate"] = rates
+    rates = []
+    for out, gt in zip(outs, gts):
+        hits = sum(1 for o in out.outputs if compute_score("openai/gsm8k", o.text, gt) >= 1.0)
+        rates.append(hits / 8.0)
+    train["pass_rate"] = rates
 
-easy = train[train.pass_rate >= 1.0]
-hard = train[train.pass_rate <= 0.0]
-middle = train[(train.pass_rate > 0.0) & (train.pass_rate < 1.0)]
-print(f"buckets: easy={len(easy)} middle={len(middle)} hard={len(hard)}")
-
-
-def take(df, n):
-    return df.sample(n=min(n, len(df)), random_state=2027)
+    easy = train[train.pass_rate >= 1.0]
+    hard = train[train.pass_rate <= 0.0]
+    middle = train[(train.pass_rate > 0.0) & (train.pass_rate < 1.0)]
+    print(f"buckets: easy={len(easy)} middle={len(middle)} hard={len(hard)}")
 
 
-mix = pd.concat([take(easy, 640), take(middle, 320), take(hard, 640)])
-mix = mix.sample(frac=1.0, random_state=2027).reset_index(drop=True)
-mix.drop(columns=["pass_rate"]).to_parquet(f"{DATA}/mix_train.parquet", index=False)
-counts = {
-    "easy_avail": int(len(easy)), "middle_avail": int(len(middle)), "hard_avail": int(len(hard)),
-    "mix_rows": int(len(mix)),
-    "mix_easy": int((mix.pass_rate >= 1.0).sum()),
-    "mix_middle": int(((mix.pass_rate > 0.0) & (mix.pass_rate < 1.0)).sum()),
-    "mix_hard": int((mix.pass_rate <= 0.0).sum()),
-}
-probe_texts = []
-for msgs in mix["prompt"].head(128):
-    probe_texts.append(tok.apply_chat_template(list(msgs), tokenize=False, add_generation_prompt=True))
-json.dump(probe_texts, open(f"{DATA}/probe_prompts.json", "w"))
-json.dump(counts, open("/workspace/results/mix_counts.json", "w"), indent=2)
-print(json.dumps(counts, indent=2))
-print("MIX_DONE")
+    def take(df, n):
+        return df.sample(n=min(n, len(df)), random_state=2027)
+
+
+    mix = pd.concat([take(easy, 640), take(middle, 320), take(hard, 640)])
+    mix = mix.sample(frac=1.0, random_state=2027).reset_index(drop=True)
+    mix.drop(columns=["pass_rate"]).to_parquet(f"{DATA}/mix_train.parquet", index=False)
+    counts = {
+        "easy_avail": int(len(easy)), "middle_avail": int(len(middle)), "hard_avail": int(len(hard)),
+        "mix_rows": int(len(mix)),
+        "mix_easy": int((mix.pass_rate >= 1.0).sum()),
+        "mix_middle": int(((mix.pass_rate > 0.0) & (mix.pass_rate < 1.0)).sum()),
+        "mix_hard": int((mix.pass_rate <= 0.0).sum()),
+    }
+    probe_texts = []
+    for msgs in mix["prompt"].head(128):
+        probe_texts.append(tok.apply_chat_template(list(msgs), tokenize=False, add_generation_prompt=True))
+    json.dump(probe_texts, open(f"{DATA}/probe_prompts.json", "w"))
+    json.dump(counts, open("/workspace/results/mix_counts.json", "w"), indent=2)
+    print(json.dumps(counts, indent=2))
+    print("MIX_DONE")
+
+
+if __name__ == "__main__":
+    main()
