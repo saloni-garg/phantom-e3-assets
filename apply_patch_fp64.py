@@ -45,6 +45,37 @@ def patch_span(src, defn, old, new):
     return src[:s] + body.replace(old, new) + src[e:]
 
 
+GROUPWISE_REPLACEMENTS = [
+    ("scores = scores.reshape(-1).to(device=target, dtype=torch.float32)",
+     "scores = scores.reshape(-1).to(device=target, dtype=torch.float64)"),
+    ("empty = torch.empty(0, device=target, dtype=torch.float32)",
+     "empty = torch.empty(0, device=target, dtype=torch.float64)"),
+    ("ones = torch.ones_like(scores, dtype=torch.float32)",
+     "ones = torch.ones_like(scores, dtype=torch.float64)"),
+    ("count = torch.zeros(G, device=target, dtype=torch.float32).index_add_(0, gidx, ones)",
+     "count = torch.zeros(G, device=target, dtype=torch.float64).index_add_(0, gidx, ones)"),
+    ("s1 = torch.zeros(G, device=target, dtype=torch.float32).index_add_(0, gidx, scores)",
+     "s1 = torch.zeros(G, device=target, dtype=torch.float64).index_add_(0, gidx, scores)"),
+    ("var_num = torch.zeros(G, device=target, dtype=torch.float32).index_add_(0, gidx, centered * centered)",
+     "var_num = torch.zeros(G, device=target, dtype=torch.float64).index_add_(0, gidx, centered * centered)"),
+]
+
+
+def patch_groupwise(path):
+    """group_mean_std hard-casts to float32 internally, so the vectorized
+    estimator can only be fixed inside verl/utils/groupwise.py itself."""
+    src = open(path).read()
+    start = src.index("def group_mean_std(")
+    nxt = src.find("\ndef ", start + 1)
+    end = nxt if nxt != -1 else len(src)
+    body = src[start:end]
+    for old, new in GROUPWISE_REPLACEMENTS:
+        assert body.count(old) == 1, f"groupwise anchor found {body.count(old)} times: {old[:60]}"
+        body = body.replace(old, new)
+    open(path, "w").write(src[:start] + body + src[end:])
+    print("patched groupwise:", path)
+
+
 def main(path):
     src = open(path).read()
     src = patch_span(src, "def compute_grpo_outcome_advantage(", SCALAR_OLD, SCALAR_NEW)
@@ -55,3 +86,5 @@ def main(path):
 
 if __name__ == "__main__":
     main(sys.argv[1])
+    if len(sys.argv) > 2:
+        patch_groupwise(sys.argv[2])
