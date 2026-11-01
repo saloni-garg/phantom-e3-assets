@@ -55,10 +55,17 @@ def _e3_log(fn_name, token_level_rewards, index, advantages):
         pass
 
 
+def _e3_pick(kwargs, args, name, pos):
+    if name in kwargs:
+        return kwargs[name]
+    return args[pos] if len(args) > pos else None
+
+
 def compute_grpo_outcome_advantage(*args, **kwargs):
     out = _e3orig_compute_grpo_outcome_advantage(*args, **kwargs)
     try:
-        _e3_log("scalar", args[0], args[2], out[0])
+        _e3_log("scalar", _e3_pick(kwargs, args, "token_level_rewards", 0),
+                _e3_pick(kwargs, args, "index", 2), out[0])
     except Exception:
         pass
     return out
@@ -67,7 +74,8 @@ def compute_grpo_outcome_advantage(*args, **kwargs):
 def compute_grpo_vectorized_outcome_advantage(*args, **kwargs):
     out = _e3orig_compute_grpo_vectorized_outcome_advantage(*args, **kwargs)
     try:
-        _e3_log("vectorized", args[0], args[2], out[0])
+        _e3_log("vectorized", _e3_pick(kwargs, args, "token_level_rewards", 0),
+                _e3_pick(kwargs, args, "index", 2), out[0])
     except Exception:
         pass
     return out
