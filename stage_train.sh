@@ -2,6 +2,7 @@
 # Trains the pilot pair: stock seed 1, then fp64 seed 1 (RUNBOOK.md).
 set -x
 PY=/workspace/venv-e3/bin/python
+export PATH="/workspace/venv-e3/bin:$PATH"
 cd /workspace/work/verl-e3
 mkdir -p /workspace/results/advlogs
 
