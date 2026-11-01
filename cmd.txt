@@ -1,1 +1,1 @@
-stage_setup.sh:setup2
+stage_probe.sh:probe2
