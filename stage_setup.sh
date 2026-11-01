@@ -33,5 +33,6 @@ if [ ! -d /workspace/venv-e3 ]; then
 fi
 /workspace/venv-e3/bin/pip install -q -e . || exit 1
 /workspace/venv-e3/bin/pip install -q "vllm==0.11.0" || exit 1
+/workspace/venv-e3/bin/pip install -q "transformers==4.57.1" || exit 1
 /workspace/venv-e3/bin/python -c "import verl, vllm, torch; print('verl ok, vllm', vllm.__version__, 'torch', torch.__version__)" || exit 1
 echo SETUP_OK
