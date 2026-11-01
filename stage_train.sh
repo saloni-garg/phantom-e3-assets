@@ -3,6 +3,7 @@
 set -x
 PY=/workspace/venv-e3/bin/python
 export PATH="/workspace/venv-e3/bin:$PATH"
+export VLLM_USE_FLASHINFER_SAMPLER=0
 cd /workspace/work/verl-e3
 mkdir -p /workspace/results/advlogs
 
